@@ -1,11 +1,11 @@
 'use client';
 
-import { debounce, isEqual } from 'lodash';
-import { type ReactNode, useEffect, useState, useCallback } from 'react';
+import { debounce, isEqual } from 'es-toolkit';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import type { SyncInterviewType } from '~/actions/interviews';
 import usePrevious from '~/hooks/usePrevious';
-import { getActiveSession } from '~/lib/interviewer/selectors/session';
+import { getActiveSession } from '~/lib/interviewer/selectors/shared';
 
 // The job of ServerSync is to listen to actions in the redux store, and to sync
 // data with the server.
@@ -26,9 +26,7 @@ const ServerSync = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSessionSync = useCallback(
     debounce(serverSync, 2000, {
-      leading: true,
-      trailing: true,
-      maxWait: 10000,
+      edges: ['trailing', 'leading'],
     }),
     [serverSync],
   );

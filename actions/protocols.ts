@@ -1,14 +1,14 @@
 'use server';
 
 import { type Protocol } from '@codaco/shared-consts';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '~/lib/db/generated/client';
 import { safeRevalidateTag } from 'lib/cache';
 import { hash } from 'ohash';
-import { UTApi } from 'uploadthing/server';
 import { type z } from 'zod';
+import { getUTApi } from '~/lib/uploadthing-server-helpers';
 import { protocolInsertSchema } from '~/schemas/protocol';
 import { requireApiAuth } from '~/utils/auth';
-import { prisma } from '~/utils/db';
+import { prisma } from '~/lib/db';
 import { addEvent } from './activityFeed';
 
 // When deleting protocols we must first delete the assets associated with them
@@ -109,7 +109,7 @@ async function deleteFilesFromUploadThing(fileKey: string | string[]) {
     return;
   }
 
-  const utapi = new UTApi();
+  const utapi = await getUTApi();
 
   const response = await utapi.deleteFiles(fileKey);
 

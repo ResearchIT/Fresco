@@ -1,71 +1,90 @@
-FROM node:lts-alpine  AS base
+FROM node:lts-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
 
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-#RUN apk add --no-cache libc6-compat
+# Install libc6-compat for better compatibility and git for version info
+RUN apk add --no-cache libc6-compat git
+
 WORKDIR /app
 
-# Prisma stuff
-COPY prisma ./prisma
+# Enable corepack early for better caching
+RUN corepack enable
 
-# Copy package.json and lockfile, along with postinstall script
-COPY package.json pnpm-lock.yaml* postinstall.js migrate-and-start.sh handle-migrations.js ./
+# Copy dependency files
+COPY package.json pnpm-lock.yaml* prisma.config.ts env.js ./
+COPY lib/db/schema.prisma ./lib/db/schema.prisma
 
-# # Install pnpm and install dependencies
-RUN corepack enable pnpm && pnpm i --frozen-lockfile
+# Install pnpm and dependencies with cache mount for faster builds
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    --mount=type=cache,target=/root/.cache/pnpm \
+    corepack enable pnpm && pnpm i --frozen-lockfile --prefer-offline
 
 # ---------
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
 
-# Install git - this is needed to get the app version during build
+# Install git for version info
 RUN apk add --no-cache git
 
-ENV SKIP_ENV_VALIDATION=true
-RUN corepack enable pnpm && pnpm run build
+# Copy node_modules from deps stage
+COPY --from=deps /app/node_modules ./node_modules
 
-# If using npm comment out above and use below instead
-# RUN npm run build
+# Copy source code
+COPY . .
+
+# Set environment variables for build - they are provided at runtime
+ENV SKIP_ENV_VALIDATION=true
+ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+# Enable pnpm, generate Prisma client, and build
+# Note: prisma generate must run here because the generated client (lib/db/generated/)
+# is gitignored and not copied from deps stage (only node_modules is copied)
+# and without the client being present, the build will fail.
+#
+# The client is generated _again_ as part of migrate-and-start.sh in the final image
+# to ensure that it inherits the correct runtime environment variables.
+RUN corepack enable pnpm && pnpm exec prisma generate && pnpm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
+# Set production environment variables
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
 
-# disable telemetry during runtime.
-ENV NEXT_TELEMETRY_DISABLED 1
+# Create user and group in a single layer
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
+# Copy public assets
 COPY --from=builder /app/public ./public
 
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
+# Create .next directory with correct permissions
+RUN mkdir .next && chown nextjs:nodejs .next
 
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
+# Copy built application with correct permissions
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/handle-migrations.js ./
-COPY --from=builder --chown=nextjs:nodejs /app/migrate-and-start.sh ./
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
+# Copy runtime scripts, database files, and dependencies needed for tsx
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+COPY --from=builder --chown=nextjs:nodejs /app/lib/db ./lib/db
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
+COPY --from=builder --chown=nextjs:nodejs /app/env.js ./
+COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./
+
+# Switch to non-root user
 USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-
-# server.js is created by next build from the standalone output
-# https://nextjs.org/docs/pages/api-reference/next-config-js/output
-# CMD HOSTNAME="0.0.0.0" npm run start:prod
-CMD ["sh", "migrate-and-start.sh"]
+# Use exec form for better signal handling
+CMD ["sh", "scripts/migrate-and-start.sh"]

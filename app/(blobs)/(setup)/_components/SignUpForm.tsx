@@ -1,5 +1,6 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
 import { signup } from '~/actions/auth';
 import { Button } from '~/components/ui/Button';
 import { Input } from '~/components/ui/Input';
@@ -9,15 +10,25 @@ import { createUserSchema } from '~/schemas/auth';
 export const SignUpForm = () => {
   const {
     register,
-    formState: { errors, isValid },
+    handleSubmit,
+    watch,
+    trigger,
+    formState: { errors, isValid, isSubmitting },
   } = useZodForm({
     schema: createUserSchema,
+    mode: 'onTouched',
   });
+
+  const onSubmit = async (data: unknown) => {
+    await signup(data);
+  };
+
+  const password = watch('password');
 
   return (
     <form
       className="flex flex-col"
-      action={signup}
+      onSubmit={(event) => void handleSubmit(onSubmit)(event)}
       autoComplete="do-not-autofill"
     >
       <div className="mb-6 flex flex-wrap">
@@ -28,31 +39,41 @@ export const SignUpForm = () => {
           placeholder="username..."
           autoComplete="do-not-autofill"
           error={errors.username?.message}
-          {...register('username')}
+          {...register('username', {})}
         />
       </div>
       <div className="mb-6 flex flex-wrap">
         <Input
+          className="w-full"
           label="Password"
           hint="Your password must be at least 8 characters long, and contain at least one each of lowercase, uppercase, number and symbol characters."
           type="password"
           placeholder="******************"
           autoComplete="do-not-autofill"
           error={errors.password?.message}
-          {...register('password')}
+          {...register('password', {
+            onChange: () => trigger('password'),
+          })}
         />
+        {password && password.length > 0 && (
+          <Input
+            className="w-full"
+            label="Confirm password"
+            type="password"
+            placeholder="******************"
+            autoComplete="do-not-autofill"
+            error={errors.confirmPassword?.message}
+            {...register('confirmPassword', {
+              onChange: () => trigger('confirmPassword'),
+            })}
+          />
+        )}
       </div>
-      <div className="flex flex-wrap">
-        {/* {isLoading ? (
-          <Button disabled>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Creating account...
-          </Button>
-        ) : ( */}
-        <Button type="submit" disabled={!isValid}>
-          Create account
+      <div className="flex flex-wrap justify-end">
+        <Button disabled={isSubmitting || !isValid} type="submit">
+          {isSubmitting && <Loader2 className="mr-2 animate-spin" />}
+          {isSubmitting ? 'Creating account...' : 'Create account'}
         </Button>
-        {/* )} */}
       </div>
     </form>
   );

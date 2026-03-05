@@ -9,14 +9,22 @@ export default function SettingsSection({
   children,
   controlArea,
   classNames,
+  devOnly,
 }: {
   heading: string;
   children: ReactNode;
   controlArea?: ReactNode;
   classNames?: string;
+  devOnly?: boolean;
 }) {
   return (
-    <Section classNames={cn(classNames, 'flex gap-10')}>
+    <Section
+      classNames={cn(
+        classNames,
+        'flex gap-10',
+        devOnly && 'border-destructive bg-destructive/5 text-destructive',
+      )}
+    >
       <div className="flex-1">
         <Heading variant="h4-all-caps" className="mb-2">
           {heading}
@@ -24,7 +32,7 @@ export default function SettingsSection({
         {children}
       </div>
       {controlArea && (
-        <div className="flex flex-shrink-0 flex-col items-end justify-center">
+        <div className="flex shrink-0 flex-col items-end justify-center">
           {controlArea}
         </div>
       )}
@@ -44,7 +52,7 @@ export function SettingsSectionSkeleton({
         <Skeleton className="h-12 w-3/4" />
       </div>
       {controlAreaSkelton && (
-        <div className="flex min-w-32 flex-shrink-0 flex-col items-end justify-center">
+        <div className="flex min-w-32 shrink-0 flex-col items-end justify-center">
           {controlAreaSkelton}
         </div>
       )}

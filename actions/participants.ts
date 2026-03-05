@@ -8,7 +8,7 @@ import {
   updateSchema,
 } from '~/schemas/participant';
 import { requireApiAuth } from '~/utils/auth';
-import { prisma } from '~/utils/db';
+import { prisma } from '~/lib/db';
 
 export async function deleteParticipants(participantIds: string[]) {
   await requireApiAuth();
@@ -56,6 +56,8 @@ export async function importParticipants(rawInput: unknown) {
   */
   const participantsWithIdentifiers = participantList.map((participant) => {
     return {
+      // Cannot use nullish coalescing here because of https://github.com/complexdatacollective/Fresco/pull/140/commits/06260b815558030b0605e14e5baf5a6ce238b1ab
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       identifier: !participant.identifier ? createId() : participant.identifier,
       label: participant.label === '' ? undefined : participant.label,
     };
@@ -102,14 +104,12 @@ export async function importParticipants(rawInput: unknown) {
 export async function updateParticipant(rawInput: unknown) {
   await requireApiAuth();
 
-  const { identifier, label } = updateSchema.parse(rawInput);
+  const { existingIdentifier, formData } = updateSchema.parse(rawInput);
 
   try {
     const updatedParticipant = await prisma.participant.update({
-      where: { identifier },
-      data: {
-        label: label,
-      },
+      where: { identifier: existingIdentifier },
+      data: formData,
     });
 
     safeRevalidateTag('getParticipants');

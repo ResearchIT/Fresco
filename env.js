@@ -17,10 +17,10 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */
   server: {
-    POSTGRES_PRISMA_URL: z.string(),
-    POSTGRES_URL_NON_POOLING: z.string(),
-    DISABLE_ANALYTICS: strictBooleanSchema,
+    DATABASE_URL: z.string(),
+    DATABASE_URL_UNPOOLED: z.string(),
     PUBLIC_URL: z.string().url().optional(),
+    USE_NEON_POSTGRES_ADAPTER: strictBooleanSchema,
   },
 
   /**
@@ -31,28 +31,30 @@ export const env = createEnv({
   client: {},
   shared: {
     PUBLIC_URL: z.string().url().optional(),
+    INSTALLATION_ID: z.string().optional(),
+    DISABLE_ANALYTICS: strictBooleanSchema,
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),
     SANDBOX_MODE: strictBooleanSchema,
     APP_VERSION: z.string().optional(),
     COMMIT_HASH: z.string().optional(),
-    INSTALLATION_ID: z.string().optional(),
   },
   /**
    * You can't destruct `process.env` as a regular object in the Next.js edge runtimes (e.g.
    * middlewares) or client-side so we need to destruct manually.
    */
   runtimeEnv: {
-    POSTGRES_PRISMA_URL: process.env.POSTGRES_PRISMA_URL,
-    POSTGRES_URL_NON_POOLING: process.env.POSTGRES_URL_NON_POOLING,
+    DATABASE_URL: process.env.DATABASE_URL,
+    DATABASE_URL_UNPOOLED: process.env.DATABASE_URL_UNPOOLED,
     NODE_ENV: process.env.NODE_ENV,
     PUBLIC_URL: process.env.PUBLIC_URL,
     DISABLE_ANALYTICS: process.env.DISABLE_ANALYTICS,
-    SANDBOX_MODE: process.env.SANDBOX_MODE,
     INSTALLATION_ID: process.env.INSTALLATION_ID,
+    SANDBOX_MODE: process.env.SANDBOX_MODE,
     APP_VERSION: process.env.APP_VERSION,
     COMMIT_HASH: process.env.COMMIT_HASH,
+    USE_NEON_POSTGRES_ADAPTER: process.env.USE_NEON_POSTGRES_ADAPTER,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

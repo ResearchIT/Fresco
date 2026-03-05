@@ -7,16 +7,18 @@ import Heading from './typography/Heading';
 import { paragraphVariants } from './typography/Paragraph';
 
 const alertVariants = cva(
-  'relative w-full bg-card text-foreground rounded-lg border p-4 [&>svg~*]:pl-6 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground',
+  'relative w-full bg-card text-foreground rounded-lg border p-4 [&>svg~*]:pl-6 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground gap-2 grid my-6',
   {
     variants: {
       variant: {
         default: '',
-        info: 'border-info bg-info/10 [--link:var(--info)] [&>svg]:text-info',
+        info: 'bg-info/5 border-info text-info [--color-link:var(--color-info)] [&>svg]:text-info',
         destructive:
-          'border-destructive bg-destructive/5 text-destructive dark:border-destructive [&>svg]:text-destructive [--link:var(--destructive)]',
+          'bg-destructive/5 border-destructive text-destructive [&>svg]:text-destructive [--color-link:var(--color-destructive)]',
         success:
-          'border-success bg-success/10 text-success-foreground [&>svg]:text-success-foreground [--link:var(--success-foreground)]',
+          'bg-success/5 border-success text-success [&>svg]:text-success [--color-link:var(--color-success)]',
+        warning:
+          'bg-warning/2 border-warning text-warning [--color-link:var(--color-warning)]',
       },
     },
     defaultVariants: {
@@ -58,8 +60,7 @@ const AlertDescription = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'mt-1',
-      paragraphVariants({ variant: 'smallText' }),
+      paragraphVariants({ variant: 'smallText', margin: 'none' }),
       className,
     )}
     {...props}
