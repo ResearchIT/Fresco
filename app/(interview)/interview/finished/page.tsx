@@ -1,15 +1,28 @@
-import { BadgeCheck } from 'lucide-react';
-import Heading from '~/components/ui/typography/Heading';
-import Paragraph from '~/components/ui/typography/Paragraph';
+import { Suspense } from 'react';
 
-export const dynamic = 'force-dynamic';
+import InterviewCompleted from '~/app/(interview)/interview/_components/InterviewCompleted';
 
-export default function InterviewCompleted() {
+async function Completed({
+  searchParams,
+}: {
+  searchParams: Promise<{ language?: string | string[] }>;
+}) {
+  const { language } = await searchParams;
   return (
-    <div className="flex h-screen flex-col items-center justify-center bg-[var(--nc-background)] text-primary-foreground">
-      <BadgeCheck className="mb-4 h-12 w-12 text-[var(--color-sea-green)]" />
-      <Heading variant="h1">Thank you for participating!</Heading>
-      <Paragraph>Your interview has been successfully completed.</Paragraph>
-    </div>
+    <InterviewCompleted
+      language={typeof language === 'string' ? language : null}
+    />
+  );
+}
+
+export default function InterviewCompletedPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ language?: string | string[] }>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <Completed searchParams={searchParams} />
+    </Suspense>
   );
 }
